@@ -417,12 +417,16 @@ func TestMessageRepo_Delete(t *testing.T) {
 // When the right number of arguments are passed
 // This test is just to improve coverage
 func TestMessageRepo_Initialize(t *testing.T) {
-	dbdriver := "mysql"
-	username := "username"
+	dbdriver := "pgx"
+	username := "root"
 	password := "password"
-	host := "host"
-	database := "database"
-	port := "port"
+	host := "localhost"
+	database := "unit_test"
+	port := "5432"
 	dbConnect := MessageRepo.Initialize(dbdriver, username, password, port, host, database)
-	fmt.Println("this is the pool: ", dbConnect)
+	err := dbConnect.Ping()
+	if err != nil {
+		t.Errorf("Failed to ping %s: %v", dbdriver, err)
+	}
+	t.Logf("Connection and ping is successful: %v", dbConnect)
 }

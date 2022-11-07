@@ -37,7 +37,8 @@ type messageRepo struct {
 
 func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) *sql.DB {
 	var err error
-	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
+	// DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?sslmode=disable&timezone=UTC&connect_timeout=5", DbUser, DbPassword, DbHost, DbPort, DbName)
+	DBURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable timezone=UTC connect_timeout=5", DbHost, DbPort, DbUser, DbPassword, DbName)
 
 	mr.db, err = sql.Open(Dbdriver, DBURL)
 	if err != nil {
