@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"context"
 	"database/sql"
+	"time"
 	"unit_test/utils/error_formats"
 	"unit_test/utils/error_utils"
 
@@ -17,7 +19,7 @@ var (
 
 const (
 	queryGetMessage     = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
-	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
+	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3) RETURNING id;"
 	queryUpdateMessage  = "UPDATE messages SET title=?, body=? WHERE id=?;"
 	queryDeleteMessage  = "DELETE FROM messages WHERE id=?;"
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
@@ -97,24 +99,20 @@ func (mr *messageRepo) GetAll() ([]Message, error_utils.MessageErr) {
 }
 
 func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
-	fmt.Println("WE REACHED THE DOMAIN")
-	stmt, err := mr.db.Prepare(queryInsertMessage)
-	if err != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to prepare user to save: %s", err.Error()))
-	}
-	fmt.Println("WE DIDNT REACH HERE")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
 
-	defer stmt.Close()
+	var id int64
+	insertErr := mr.db.QueryRowContext(ctx, queryInsertMessage,
+		msg.Title,
+		msg.Body,
+		msg.CreatedAt,
+	).Scan(&id)
 
-	insertResult, createErr := stmt.Exec(msg.Title, msg.Body, msg.CreatedAt)
-	if createErr != nil {
-		return nil, error_formats.ParseError(createErr)
+	if insertErr != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", insertErr.Error()))
 	}
-	msgId, err := insertResult.LastInsertId()
-	if err != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err.Error()))
-	}
-	msg.Id = msgId
+	msg.Id = id
 
 	return msg, nil
 }
