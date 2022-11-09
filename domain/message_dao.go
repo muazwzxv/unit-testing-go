@@ -19,7 +19,7 @@ var (
 
 const (
 	queryGetMessage     = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
-	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3) RETURNING id;"
+	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3);"
 	queryUpdateMessage  = "UPDATE messages SET title=?, body=? WHERE id=?;"
 	queryDeleteMessage  = "DELETE FROM messages WHERE id=?;"
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
@@ -102,16 +102,29 @@ func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	var id int64
-	insertErr := mr.db.QueryRowContext(ctx, queryInsertMessage,
+	stmt, err := mr.db.Prepare(queryInsertMessage)
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err.Error()))
+	}
+	defer stmt.Close()
+
+	result, err := stmt.ExecContext(ctx,
 		msg.Title,
 		msg.Body,
 		msg.CreatedAt,
-	).Scan(&id)
+	)
 
-	if insertErr != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", insertErr.Error()))
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err))
 	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err))
+	}
+
+	// TODO: LastInsertedID not supported in postgres, integration test fails
+
 	msg.Id = id
 
 	return msg, nil

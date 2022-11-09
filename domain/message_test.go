@@ -109,7 +109,10 @@ func TestMessageRepo_Create(t *testing.T) {
 				CreatedAt: tm,
 			},
 			mock: func() {
-				mock.ExpectPrepare("INSERT INTO messages").ExpectExec().WithArgs("title", "body", tm).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectPrepare("INSERT INTO messages").
+					ExpectExec().
+					WithArgs("title", "body", tm).
+					WillReturnResult(sqlmock.NewResult(1, 1))
 			},
 			want: &Message{
 				Id:        1,
@@ -117,6 +120,7 @@ func TestMessageRepo_Create(t *testing.T) {
 				Body:      "body",
 				CreatedAt: tm,
 			},
+			wantErr: false,
 		},
 		{
 			name: "Empty title",
