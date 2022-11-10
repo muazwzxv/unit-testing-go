@@ -19,7 +19,7 @@ var (
 
 const (
 	queryGetMessage     = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
-	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3);"
+	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3) returning id;"
 	queryUpdateMessage  = "UPDATE messages SET title=?, body=? WHERE id=?;"
 	queryDeleteMessage  = "DELETE FROM messages WHERE id=?;"
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
@@ -108,17 +108,13 @@ func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	}
 	defer stmt.Close()
 
-	result, err := stmt.ExecContext(ctx,
+	var id int64
+	err = stmt.QueryRowContext(ctx,
 		msg.Title,
 		msg.Body,
 		msg.CreatedAt,
-	)
+	).Scan(&id)
 
-	if err != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err))
-	}
-
-	id, err := result.LastInsertId()
 	if err != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err))
 	}
